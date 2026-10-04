@@ -117,12 +117,23 @@ function resizeRenderer(){
 }
 function makePlayerMesh(color,number){
   const g=new THREE.Group();
-  const body=new THREE.Mesh(new THREE.CapsuleGeometry(.42,.9,6,10),new THREE.MeshStandardMaterial({color,roughness:.8}));
-  body.position.y=1.05;body.castShadow=quality==="high";g.add(body);
-  const head=new THREE.Mesh(new THREE.SphereGeometry(.27,12,10),new THREE.MeshStandardMaterial({color:0xd8a47c,roughness:.9}));
-  head.position.y=1.9;head.castShadow=quality==="high";g.add(head);
-  const shirt=new THREE.Mesh(new THREE.BoxGeometry(.55,.42,.25),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.9}));
-  shirt.position.y=1.2;g.add(shirt);
+  const skin=new THREE.MeshStandardMaterial({color:0xc98f69,roughness:.9});
+  const kit=new THREE.MeshStandardMaterial({color,roughness:.72,metalness:.02});
+  const dark=new THREE.MeshStandardMaterial({color:0x15181c,roughness:.85});
+  const shoe=new THREE.MeshStandardMaterial({color:0xf3f3f3,roughness:.55});
+  const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.43,.72,8,12),kit); torso.position.y=1.16; torso.scale.z=.72; torso.castShadow=quality==='high'; g.add(torso);
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(.13,.14,.18,10),skin); neck.position.y=1.67; g.add(neck);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.29,16,12),skin); head.position.y=1.94; head.castShadow=quality==='high'; g.add(head);
+  const hair=new THREE.Mesh(new THREE.SphereGeometry(.30,16,8,0,Math.PI*2,0,Math.PI*.45),dark); hair.position.y=2.04; g.add(hair);
+  const armL=new THREE.Mesh(new THREE.CapsuleGeometry(.11,.52,6,8),kit); armL.position.set(-.52,1.2,0); armL.rotation.z=-.18; g.add(armL);
+  const armR=armL.clone(); armR.position.x=.52; armR.rotation.z=.18; g.add(armR);
+  const legL=new THREE.Mesh(new THREE.CapsuleGeometry(.14,.68,6,8),dark); legL.position.set(-.2,.55,0); g.add(legL);
+  const legR=legL.clone(); legR.position.x=.2; g.add(legR);
+  const shoeL=new THREE.Mesh(new THREE.BoxGeometry(.24,.12,.46),shoe); shoeL.position.set(-.2,.18,-.11); g.add(shoeL);
+  const shoeR=shoeL.clone(); shoeR.position.x=.2; g.add(shoeR);
+  const numCanvas=document.createElement('canvas');numCanvas.width=128;numCanvas.height=128;const nctx=numCanvas.getContext('2d');nctx.fillStyle='#fff';nctx.font='bold 64px Arial';nctx.textAlign='center';nctx.textBaseline='middle';nctx.fillText(String(number+1),64,66);
+  const nt=new THREE.CanvasTexture(numCanvas);const ns=new THREE.Sprite(new THREE.SpriteMaterial({map:nt,transparent:true,depthTest:true}));ns.scale.set(.42,.42,1);ns.position.set(0,1.25,.24);g.add(ns);
+  g.userData.parts={armL,armR,legL,legR};
   return g;
 }
 function makeTextSprite(text,color="#ffffff"){
@@ -157,10 +168,10 @@ function makeField(){
 function makeStandsAndCrowd(){
   const standMat=new THREE.MeshStandardMaterial({color:0x26342b,roughness:1});
   [[0,-78,120,8],[0,78,120,8],[-52,0,8,140],[52,0,8,140]].forEach(a=>{const m=new THREE.Mesh(new THREE.BoxGeometry(a[2],5,a[3]),standMat);m.position.set(a[0],2.5,a[1]);m.castShadow=quality==="high";scene.add(m)});
-  const colors=[0xf4f4f4,0xffcf4a,0x55a9ff,0xff5d6c,0x6be38a];
-  for(let side of [-1,1]) for(let row=0;row<3;row++) for(let i=0;i<28;i++){
+  const colors=[0xf4f4f4,0xffcf4a,0x55a9ff,0xff5d6c,0x6be38a,0x8f7cff];
+  for(let side of [-1,1]) for(let row=0;row<5;row++) for(let i=0;i<44;i++){
     const m=new THREE.Mesh(new THREE.CapsuleGeometry(.18,.35,4,6),new THREE.MeshStandardMaterial({color:colors[(i+row)%colors.length]}));
-    m.position.set(-48+i*3.55,3.2+row*.65,side*(77+row*2.2));scene.add(m);crowd.push(m);
+    m.position.set(-48+i*2.25,3.2+row*.72,side*(77+row*2.2));scene.add(m);crowd.push(m);
   }
 }
 function makeReferee(){
@@ -171,6 +182,8 @@ function makeGoal(x,z){
   const g=new THREE.Group(),mat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.5});
   [[-7,2.7,0],[7,2.7,0],[-7,0,-2],[7,0,-2]].forEach(a=>{const p=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,.12+a[1]*2,10),mat);p.position.set(a[0],a[1],z+a[2]);g.add(p)});
   const bar=new THREE.Mesh(new THREE.BoxGeometry(14,.16,.16),mat);bar.position.set(0,5.4,z);g.add(bar);
+  const netMat=new THREE.MeshBasicMaterial({color:0xbfd8d0,transparent:true,opacity:.25,wireframe:true});
+  const net=new THREE.Mesh(new THREE.BoxGeometry(14,5.2,3.8),netMat);net.position.z=z+(z<0?-1.8:1.8);net.position.y=2.6;g.add(net);
   scene.add(g);
 }
 function setupMatch(){
@@ -206,7 +219,7 @@ function controlledMove(dt){
   activePlayer.mesh.position.x+=activePlayer.vx*dt;activePlayer.mesh.position.z+=activePlayer.vz*dt;
   activePlayer.mesh.position.x=THREE.MathUtils.clamp(activePlayer.mesh.position.x,-43,43);
   activePlayer.mesh.position.z=THREE.MathUtils.clamp(activePlayer.mesh.position.z,-65,65);
-  activePlayer.mesh.rotation.y=Math.atan2(activePlayer.vx,activePlayer.vz);
+  activePlayer.mesh.rotation.y=Math.atan2(activePlayer.vx,activePlayer.vz); animatePlayer(activePlayer,dt);
 }
 function aiUpdate(dt){
   players.filter(p=>p!==activePlayer).forEach(p=>{
@@ -215,8 +228,16 @@ function aiUpdate(dt){
     if(l>2){p.vx=THREE.MathUtils.lerp(p.vx,dx/l*(p.home?4.3:4.8),dt*2);p.vz=THREE.MathUtils.lerp(p.vz,dz/l*(p.home?4.3:4.8),dt*2)}
     else {p.vx*=.8;p.vz*=.8}
     p.mesh.position.x+=p.vx*dt;p.mesh.position.z+=p.vz*dt;p.stamina=Math.max(0,p.stamina-dt*2.2);updateStaminaSprite(p);
-    p.mesh.position.x=THREE.MathUtils.clamp(p.mesh.position.x,-43,43);p.mesh.position.z=THREE.MathUtils.clamp(p.mesh.position.z,-65,65);
+    p.mesh.position.x=THREE.MathUtils.clamp(p.mesh.position.x,-43,43);p.mesh.position.z=THREE.MathUtils.clamp(p.mesh.position.z,-65,65); p.mesh.rotation.y=Math.atan2(p.vx,p.vz); animatePlayer(p,dt);
   });
+}
+function animatePlayer(p,dt){
+  const parts=p.mesh.userData.parts;if(!parts)return;
+  const speed=Math.min(1,Math.hypot(p.vx,p.vz)/5);
+  p.mesh.userData.runTime=(p.mesh.userData.runTime||0)+dt*(4+speed*10);
+  const a=Math.sin(p.mesh.userData.runTime)*.55*speed;
+  parts.legL.rotation.x=a; parts.legR.rotation.x=-a; parts.armL.rotation.x=-a*.7; parts.armR.rotation.x=a*.7;
+  p.mesh.position.y=.03+Math.abs(Math.sin(p.mesh.userData.runTime*2))*.015*speed;
 }
 function updateReferee(dt){
   if(!referee||!ball)return;const target=ball.position;const dx=target.x-referee.mesh.position.x,dz=target.z-referee.mesh.position.z,l=Math.hypot(dx,dz);if(l>5){referee.vx=dx/l*3.2;referee.vz=dz/l*3.2}else{referee.vx*=.85;referee.vz*=.85}referee.mesh.position.x+=referee.vx*dt;referee.mesh.position.z+=referee.vz*dt;referee.mesh.position.x=THREE.MathUtils.clamp(referee.mesh.position.x,-40,40);referee.mesh.position.z=THREE.MathUtils.clamp(referee.mesh.position.z,-62,62);
@@ -227,6 +248,7 @@ function detectFouls(dt){
   if(near && Math.random()<dt*.18){foulCooldown=7;const inBox=ball.position.z<-48 && Math.abs(ball.position.x)<18;const key=near.data[0];const c=(cardCounts.get(key)||0)+1;cardCounts.set(key,c);if(c===1)showEvent("🟨 بطاقة صفراء • مخالفة",1300);else if(c>=2)showEvent("🟥 طرد • بطاقة حمراء",1300);else showEvent("مخالفة",1000);startSetPiece(inBox?"penalty":"freeKick");}
 }
 function updateBall(dt){
+  if(activePlayer && ball.position.distanceTo(activePlayer.mesh.position)<1.7 && Math.hypot(ball.userData.vx||0,ball.userData.vz||0)<3 && !setPiece){ ball.position.x=activePlayer.mesh.position.x; ball.position.z=activePlayer.mesh.position.z-1.05; }
   if(!ball.userData.vx)ball.userData={vx:0,vz:0,vy:0};
   const v=ball.userData;
   ball.position.x+=v.vx*dt;ball.position.z+=v.vz*dt;ball.position.y+=v.vy*dt;
